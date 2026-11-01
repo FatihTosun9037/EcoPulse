@@ -14,6 +14,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _timer;
     private int _busy;
     private bool _loading;
+    private string _scenarioText = "Normal akış. Hatlar nominal değerde.";
 
     public MainWindow()
     {
@@ -55,6 +56,27 @@ public partial class MainWindow : Window
         MaintenanceButton.IsEnabled = AlarmList.SelectedItem is AlarmRow { Status: "ACTIVE" };
     }
 
+    private void NormalButton_Click(object sender, RoutedEventArgs e)
+    {
+        _simulator.ClearFault();
+        _scenarioText = "Normal akış. Hatlar nominal değerde.";
+        StatusText.Text = _scenarioText;
+    }
+
+    private void FaultButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (MachineList.SelectedItem is not MachineRow selected)
+        {
+            _scenarioText = "Önce soldan bir makine seçin.";
+            StatusText.Text = _scenarioText;
+            return;
+        }
+
+        _simulator.SetFault(selected.MachineId);
+        _scenarioText = $"{selected.Name} arızada ({FaultLabel(selected.Name)}). Alarm yaklaşık 6 saniye içinde açılır.";
+        StatusText.Text = _scenarioText;
+    }
+
     private async void MaintenanceButton_Click(object sender, RoutedEventArgs e)
     {
         if (AlarmList.SelectedItem is not AlarmRow alarm || alarm.Status != "ACTIVE")
@@ -63,6 +85,8 @@ public partial class MainWindow : Window
         }
 
         MaintenanceButton.IsEnabled = false;
+        _simulator.ClearFault();
+        _scenarioText = "Bakım bildirildi. Seçili hat normale döndü.";
         try
         {
             await Task.Run(() => _repository.ReportMaintenance(alarm.AnomalyId, alarm.MachineId));
@@ -73,6 +97,13 @@ public partial class MainWindow : Window
             StatusText.Text = "Bakım bildirimi yazılamadı: " + ex.Message;
         }
     }
+
+    private static string FaultLabel(string machineName) => machineName switch
+    {
+        "Enjeksiyon Makinesi 2" or "CNC İşleme Merkezi" => "boşta çalışma",
+        "Fırın Konveyörü" or "Soğutma Pompası" => "atık ısı",
+        _ => "aşırı akım"
+    };
 
     private async Task RefreshAsync()
     {
@@ -88,7 +119,7 @@ public partial class MainWindow : Window
             Snapshot snapshot = await Task.Run(() => _repository.Load(machineId));
             Apply(snapshot, machineId, alarmId);
             LiveDot.Fill = new SolidColorBrush(Color.FromRgb(61, 220, 151));
-            StatusText.Text = "Yerel veriler kayıtlı  ·  Simülasyon çalışıyor";
+            StatusText.Text = "Yerel veriler kayıtlı  ·  " + _scenarioText;
         }
         catch (Exception ex)
         {

@@ -70,9 +70,6 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#62E8B0"/>
-                            </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Chrome" Property="Background" Value="#24332C"/>
                                 <Setter Property="Foreground" Value="#6E8A80"/>
@@ -81,6 +78,10 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#FF6A6A"/>
+            <Setter Property="Foreground" Value="#1A0C0C"/>
         </Style>
         <DataTemplate DataType="{x:Type local:MachineRow}">
             <StackPanel>
@@ -128,7 +129,9 @@
                 <TextBlock Text="EcoPulse OSB" FontSize="26" FontWeight="SemiBold"/>
                 <TextBlock Text="Akıllı enerji kaçağı ve ısı kaybı erken uyarı" Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="16,0,0,2">
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                <Button x:Name="NormalButton" Content="Normal" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Click="NormalButton_Click"/>
+                <Button x:Name="FaultButton" Content="Arıza bas" Style="{StaticResource DangerButton}" Margin="0,0,16,0" Click="FaultButton_Click"/>
                 <Ellipse x:Name="LiveDot" Width="8" Height="8" Fill="#3DDC97" Margin="0,0,8,0" VerticalAlignment="Center"/>
                 <TextBlock x:Name="ClockText" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
             </StackPanel>

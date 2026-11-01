@@ -11,7 +11,7 @@ internal sealed class SimulatorService
     private readonly List<SimulationMachine> _machines;
     private readonly Dictionary<(int MachineId, string Type), int> _counts = new();
     private readonly Random _random = new();
-    private int _tick;
+    private int _faultMachineId;
 
     public SimulatorService(DashboardRepository repository)
     {
@@ -72,22 +72,24 @@ internal sealed class SimulatorService
         }
 
         _repository.SaveSimulationTick(readings, anomalies);
-        _tick++;
     }
+
+    public void SetFault(int machineId) => Volatile.Write(ref _faultMachineId, machineId);
+
+    public void ClearFault() => Volatile.Write(ref _faultMachineId, 0);
 
     private string GetMode(SimulationMachine machine)
     {
-        if (_tick < 3)
+        if (Volatile.Read(ref _faultMachineId) != machine.Id)
         {
             return "normal";
         }
 
         return machine.Name switch
         {
-            "Kompresör Hattı A" => "asiri_akim",
-            "Enjeksiyon Makinesi 2" => "bosta",
-            "Fırın Konveyörü" => "atik_isi",
-            _ => "normal"
+            "Enjeksiyon Makinesi 2" or "CNC İşleme Merkezi" => "bosta",
+            "Fırın Konveyörü" or "Soğutma Pompası" => "atik_isi",
+            _ => "asiri_akim"
         };
     }
 

@@ -28,6 +28,5 @@ GitHub Actions sürüm oluşturma iş akışı, `v` ile başlayan bir etiket yay
 ## Proje yapısı
 
 - `dashboard/` — WPF masaüstü uygulaması, yerel SQLite deposu ve sensör simülatörü.
-- `database/schema.sql` ve `simulator/` — ilk prototipten kalan MySQL/Python başvuru dosyaları; yayımlanan masaüstü uygulaması bunlara bağlı değildir.
 
-Makineye özel `config.json`, eski MySQL başlatma betiği ve yerel proje raporu Git'e eklenmez.
+Yerel proje raporu Git'e eklenmez.
