@@ -62,8 +62,8 @@ public sealed class Sparkline : FrameworkElement
             return new Point(x, y);
         }
 
-        Color lineColor = LineBrush is SolidColorBrush solid ? solid.Color : Colors.White;
-        var gridBrush = new SolidColorBrush(Color.FromArgb(28, 255, 255, 255));
+        Color lineColor = LineBrush is SolidColorBrush solid ? solid.Color : Color.FromRgb(0xE4, 0xE7, 0xEB);
+        var gridBrush = new SolidColorBrush(Color.FromArgb(70, 0x5C, 0x67, 0x74));
         var gridPen = new Pen(gridBrush, 1);
         for (int line = 1; line <= 2; line++)
         {
@@ -93,19 +93,23 @@ public sealed class Sparkline : FrameworkElement
 
         lineGeometry.Freeze();
         fillGeometry.Freeze();
-        var fillBrush = new SolidColorBrush(Color.FromArgb(42, lineColor.R, lineColor.G, lineColor.B));
+        var fillBrush = new SolidColorBrush(Color.FromArgb(22, lineColor.R, lineColor.G, lineColor.B));
         dc.DrawGeometry(fillBrush, null, fillGeometry);
 
-        var pen = new Pen(LineBrush, 2)
+        var pen = new Pen(LineBrush, 1.6)
         {
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-            LineJoin = PenLineJoin.Round
+            StartLineCap = PenLineCap.Flat,
+            EndLineCap = PenLineCap.Flat,
+            LineJoin = PenLineJoin.Miter
         };
+        if (pen.CanFreeze)
+        {
+            pen.Freeze();
+        }
+
         dc.DrawGeometry(null, pen, lineGeometry);
 
         Point end = At(values.Count - 1);
-        dc.DrawEllipse(new SolidColorBrush(Color.FromArgb(70, lineColor.R, lineColor.G, lineColor.B)), null, end, 6, 6);
-        dc.DrawEllipse(LineBrush, null, end, 3.2, 3.2);
+        dc.DrawRectangle(LineBrush, null, new Rect(end.X - 2.2, end.Y - 2.2, 4.4, 4.4));
     }
 }

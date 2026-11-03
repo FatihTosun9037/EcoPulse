@@ -39,9 +39,11 @@ public sealed class Snapshot
 {
     public int MachineCount { get; init; }
     public double TotalPowerKw { get; init; }
-    public double PreventedCo2Kg { get; init; }
+    public double VerifiedCo2KgPerHour { get; init; }
     public double ActiveLossTlPerHour { get; init; }
+    public double VerifiedSavingsTlPerHour { get; init; }
     public int OpenWorkOrders { get; init; }
+    public int VerifyingWorkOrders { get; init; }
     public List<MachineRow> Machines { get; init; } = new();
     public List<AlarmRow> Alarms { get; init; } = new();
     public List<TelemetryPoint> Series { get; init; } = new();
@@ -114,44 +116,68 @@ public sealed class DashboardRepository
                     GROUP BY machine_id
                 ) latest ON latest.data_id = t.data_id
                 """),
-            PreventedCo2Kg = ScalarDouble(connection, """
-                SELECT COALESCE(SUM(co2_impact_kg), 0)
-                FROM anomalies
-                WHERE status = 'RESOLVED'
+            VerifiedCo2KgPerHour = ScalarDouble(connection, """
+                SELECT COALESCE(SUM(baseline_co2_kg_per_hour), 0)
+                FROM work_orders
+                WHERE status = 'VERIFIED'
                 """),
             ActiveLossTlPerHour = ScalarDouble(connection, """
                 SELECT COALESCE(SUM(financial_loss_tl), 0)
                 FROM anomalies
                 WHERE status = 'ACTIVE'
                 """),
-            OpenWorkOrders = ScalarInt(connection, "SELECT COUNT(*) FROM work_orders WHERE status = 'OPEN'"),
+            VerifiedSavingsTlPerHour = ScalarDouble(connection, """
+                SELECT COALESCE(SUM(baseline_loss_tl_per_hour), 0)
+                FROM work_orders
+                WHERE status = 'VERIFIED'
+                """),
+            OpenWorkOrders = ScalarInt(connection, """
+                SELECT COUNT(*) FROM work_orders WHERE status IN ('OPEN', 'VERIFYING')
+                """),
+            VerifyingWorkOrders = ScalarInt(connection, """
+                SELECT COUNT(*) FROM work_orders WHERE status = 'VERIFYING'
+                """),
             Machines = machines,
             Alarms = LoadAlarms(connection),
             Series = selected is int id ? LoadSeries(connection, id) : new List<TelemetryPoint>()
         };
     }
 
-    public void ReportMaintenance(int anomalyId, int machineId)
+    public bool ReportMaintenance(int anomalyId, int machineId)
     {
         using var connection = OpenConnection();
         using var transaction = connection.BeginTransaction();
-        using var statusCommand = new SqliteCommand(
-            "SELECT status FROM anomalies WHERE anomaly_id = @id",
+        using var anomalyCommand = new SqliteCommand(
+            """
+            SELECT financial_loss_tl, co2_impact_kg
+            FROM anomalies
+            WHERE anomaly_id = @id AND machine_id = @machine AND status = 'ACTIVE'
+            """,
             connection,
             transaction);
-        statusCommand.Parameters.AddWithValue("@id", anomalyId);
-        if (statusCommand.ExecuteScalar() as string != "ACTIVE")
+        anomalyCommand.Parameters.AddWithValue("@id", anomalyId);
+        anomalyCommand.Parameters.AddWithValue("@machine", machineId);
+        using SqliteDataReader anomaly = anomalyCommand.ExecuteReader();
+        if (!anomaly.Read())
         {
             transaction.Commit();
-            return;
+            return false;
         }
 
+        double lossPerHour = anomaly.GetDouble(0);
+        double co2PerHour = anomaly.GetDouble(1);
+        anomaly.Close();
+
         using var insert = new SqliteCommand("""
-            INSERT INTO work_orders (anomaly_id, machine_id, note, status)
-            VALUES (@anomaly, @machine, 'Panelden bakım bildirimi', 'OPEN')
+            INSERT INTO work_orders
+                (anomaly_id, machine_id, note, status, baseline_loss_tl_per_hour, baseline_co2_kg_per_hour)
+            VALUES
+                (@anomaly, @machine, 'Panelden bakım bildirimi', 'VERIFYING', @loss, @co2)
             """, connection, transaction);
         insert.Parameters.AddWithValue("@anomaly", anomalyId);
         insert.Parameters.AddWithValue("@machine", machineId);
+        insert.Parameters.AddWithValue("@loss", lossPerHour);
+        insert.Parameters.AddWithValue("@co2", co2PerHour);
         insert.ExecuteNonQuery();
 
         using var update = new SqliteCommand(
@@ -161,6 +187,7 @@ public sealed class DashboardRepository
         update.Parameters.AddWithValue("@id", anomalyId);
         update.ExecuteNonQuery();
         transaction.Commit();
+        return true;
     }
 
     internal List<SimulationMachine> GetSimulationMachines()
@@ -252,7 +279,83 @@ public sealed class DashboardRepository
             }
         }
 
+        UpdateMaintenanceVerifications(connection, transaction, readings);
         transaction.Commit();
+    }
+
+    private static void UpdateMaintenanceVerifications(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        IReadOnlyList<SimulationReading> readings)
+    {
+        if (readings.Count == 0)
+        {
+            return;
+        }
+
+        var readingsByMachine = readings.ToDictionary(reading => reading.MachineId);
+        using var pending = new SqliteCommand("""
+            SELECT w.work_order_id, w.machine_id, a.anomaly_type,
+                   m.nominal_current, m.max_temperature, w.verification_count
+            FROM work_orders w
+            INNER JOIN anomalies a ON a.anomaly_id = w.anomaly_id
+            INNER JOIN machines m ON m.machine_id = w.machine_id
+            WHERE w.status = 'VERIFYING'
+            """, connection, transaction);
+        using var reader = pending.ExecuteReader();
+        var updates = new List<(int WorkOrderId, int VerificationCount)>();
+
+        while (reader.Read())
+        {
+            int machineId = reader.GetInt32(1);
+            string anomalyType = reader.GetString(2);
+            double nominalCurrent = reader.GetDouble(3);
+            double maxTemperature = reader.GetDouble(4);
+            int verificationCount = reader.GetInt32(5);
+            if (!readingsByMachine.TryGetValue(machineId, out SimulationReading? reading))
+            {
+                continue;
+            }
+
+            bool isNormal = anomalyType switch
+            {
+                "ASIRI_AKIM" => reading.Current <= nominalCurrent * 1.20,
+                "ATIK_ISI_KAYBI" => reading.Temperature <= maxTemperature,
+                "BOSTA_CALISMA" => reading.Current / nominalCurrent < 0.10
+                    || reading.Current / nominalCurrent >= 0.35,
+                _ => false
+            };
+            updates.Add((reader.GetInt32(0), isNormal ? verificationCount + 1 : 0));
+        }
+
+        reader.Close();
+        string timestamp = FormatTimestamp(readings[0].Timestamp);
+        foreach ((int workOrderId, int verificationCount) in updates)
+        {
+            bool verified = verificationCount >= 3;
+            using var update = new SqliteCommand(verified
+                ? """
+                  UPDATE work_orders
+                  SET verification_count = 3, status = 'VERIFIED', verified_at = @verified
+                  WHERE work_order_id = @id AND status = 'VERIFYING'
+                  """
+                : """
+                  UPDATE work_orders
+                  SET verification_count = @count
+                  WHERE work_order_id = @id AND status = 'VERIFYING'
+                  """, connection, transaction);
+            update.Parameters.AddWithValue("@id", workOrderId);
+            if (verified)
+            {
+                update.Parameters.AddWithValue("@verified", timestamp);
+            }
+            else
+            {
+                update.Parameters.AddWithValue("@count", verificationCount);
+            }
+
+            update.ExecuteNonQuery();
+        }
     }
 
     private SqliteConnection OpenConnection()
@@ -303,12 +406,21 @@ public sealed class DashboardRepository
                 machine_id INTEGER NOT NULL REFERENCES machines(machine_id) ON DELETE CASCADE,
                 note TEXT,
                 status TEXT NOT NULL DEFAULT 'OPEN',
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                baseline_loss_tl_per_hour REAL NOT NULL DEFAULT 0,
+                baseline_co2_kg_per_hour REAL NOT NULL DEFAULT 0,
+                verification_count INTEGER NOT NULL DEFAULT 0,
+                verified_at TEXT
             );
             """, connection))
         {
             schema.ExecuteNonQuery();
         }
+
+        EnsureWorkOrderColumn(connection, "baseline_loss_tl_per_hour", "REAL NOT NULL DEFAULT 0");
+        EnsureWorkOrderColumn(connection, "baseline_co2_kg_per_hour", "REAL NOT NULL DEFAULT 0");
+        EnsureWorkOrderColumn(connection, "verification_count", "INTEGER NOT NULL DEFAULT 0");
+        EnsureWorkOrderColumn(connection, "verified_at", "TEXT");
 
         using var count = new SqliteCommand("SELECT COUNT(*) FROM machines", connection);
         if (Convert.ToInt32(count.ExecuteScalar(), CultureInfo.InvariantCulture) != 0)
@@ -394,7 +506,7 @@ public sealed class DashboardRepository
                 TypeLabel = TypeLabel(reader.GetString(4)),
                 SeverityLabel = status == "RESOLVED" ? "Kapandı" : severity == "CRITICAL" ? "Kritik" : "Uyarı",
                 LossText = loss.ToString("N1", Turkish) + " TL/saat",
-                MetaText = $"{location} · {co2.ToString("N2", Turkish)} kg CO₂ · {created:HH:mm:ss}",
+                MetaText = $"{location} · {co2.ToString("N2", Turkish)} kg CO₂/saat · {created:HH:mm:ss}",
                 BadgeBrush = badge,
                 BadgeSoftBrush = soft
             });
@@ -443,6 +555,25 @@ public sealed class DashboardRepository
             : Convert.ToDouble(value, CultureInfo.InvariantCulture);
     }
 
+    private static void EnsureWorkOrderColumn(SqliteConnection connection, string columnName, string definition)
+    {
+        using var columns = new SqliteCommand("PRAGMA table_info(work_orders)", connection);
+        using var reader = columns.ExecuteReader();
+        while (reader.Read())
+        {
+            if (reader.GetString(1) == columnName)
+            {
+                return;
+            }
+        }
+
+        reader.Close();
+        using var alter = new SqliteCommand(
+            $"ALTER TABLE work_orders ADD COLUMN {columnName} {definition}",
+            connection);
+        alter.ExecuteNonQuery();
+    }
+
     private static string FormatTimestamp(DateTime timestamp) =>
         timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
@@ -461,15 +592,15 @@ public sealed class DashboardRepository
     {
         if (status == "RESOLVED")
         {
-            return (BrushOf(142, 170, 160), BrushOf(142, 170, 160, 36));
+            return (BrushOf(0x8B, 0x93, 0x9E), BrushOf(0x8B, 0x93, 0x9E, 40));
         }
 
         if (severity == "CRITICAL")
         {
-            return (BrushOf(255, 106, 106), BrushOf(255, 106, 106, 36));
+            return (BrushOf(0xC0, 0x39, 0x2B), BrushOf(0xC0, 0x39, 0x2B, 42));
         }
 
-        return (BrushOf(245, 196, 81), BrushOf(245, 196, 81, 36));
+        return (BrushOf(0xD3, 0x54, 0x00), BrushOf(0xD3, 0x54, 0x00, 42));
     }
 
     private static SolidColorBrush BrushOf(byte r, byte g, byte b, byte a = 255)

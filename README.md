@@ -13,6 +13,10 @@ Uygulama Windows x64 içindir. İlk açılışta Windows SmartScreen uyarısı g
 
 Her bilgisayar kendi verisini `%LOCALAPPDATA%\EcoPulse\ecopulse.db` dosyasında saklar. Bilgisayarlar arasında ortak veritabanı kullanılmaz.
 
+## Demo akışı
+
+Panelde bir makine seçip **Arıza bas** ile simülasyon arızası oluşturun. Alarm yaklaşık 6 saniye içinde görünür. Alarmı seçip **Bakım Bildir** dediğinizde uygulama müdahale öncesi tahmini kayıp oranını kaydeder; sonraki üç normal ölçüm müdahaleyi doğrular. Doğrulanan kayıp ve CO₂ değerleri saatlik oranlardır, sahada ölçülmüş veya birikmiş tasarruf tutarı değildir.
+
 ## Kaynaktan derleme
 
 Geliştirme için Windows ve .NET 9 SDK gerekir:
@@ -29,4 +33,4 @@ GitHub Actions sürüm oluşturma iş akışı, `v` ile başlayan bir etiket yay
 
 - `dashboard/` — WPF masaüstü uygulaması, yerel SQLite deposu ve sensör simülatörü.
 
-Yerel proje raporu Git'e eklenmez.
+Teknik rapor: [EcoPulse-Proje-Teknik-Raporu.docx](./EcoPulse-Proje-Teknik-Raporu.docx).

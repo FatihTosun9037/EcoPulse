@@ -5,21 +5,26 @@
         Title="EcoPulse OSB"
         Width="1200"
         Height="760"
-        MinWidth="960"
-        MinHeight="620"
-        Background="#0F1714"
+        MinWidth="360"
+        MinHeight="520"
+        Background="#181A1F"
         FontFamily="Segoe UI"
-        Foreground="#E7F3EC"
+        Foreground="#E4E7EB"
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display">
     <Window.Resources>
-        <SolidColorBrush x:Key="Card" Color="#17241F"/>
-        <SolidColorBrush x:Key="MutedBrush" Color="#8EAAA0"/>
-        <SolidColorBrush x:Key="GreenBrush" Color="#3DDC97"/>
-        <SolidColorBrush x:Key="LineBrush" Color="#2A3D34"/>
+        <SolidColorBrush x:Key="Card" Color="#21262D"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#8B939E"/>
+        <SolidColorBrush x:Key="VoltageBrush" Color="#2B90D9"/>
+        <SolidColorBrush x:Key="CurrentBrush" Color="#2ECC71"/>
+        <SolidColorBrush x:Key="TemperatureBrush" Color="#E67E22"/>
+        <SolidColorBrush x:Key="LineBrush" Color="#3A424E"/>
+        <Style x:Key="DataReadout" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas"/>
+        </Style>
         <Style x:Key="CardBorder" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource Card}"/>
-            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="16"/>
             <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -27,7 +32,7 @@
         <Style x:Key="DarkList" TargetType="ListBox">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="#E7F3EC"/>
+            <Setter Property="Foreground" Value="#E4E7EB"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
             <Setter Property="ScrollViewer.CanContentScroll" Value="False"/>
@@ -41,15 +46,15 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Row" Background="Transparent" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="Row" Background="Transparent" CornerRadius="4" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Stretch"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Row" Property="Background" Value="#1A2C26"/>
+                                <Setter TargetName="Row" Property="Background" Value="#2A313A"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Row" Property="Background" Value="#1E3D34"/>
+                                <Setter TargetName="Row" Property="Background" Value="#323B48"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -57,8 +62,8 @@
             </Setter>
         </Style>
         <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Background" Value="#3DDC97"/>
-            <Setter Property="Foreground" Value="#0F1714"/>
+            <Setter Property="Background" Value="#2B90D9"/>
+            <Setter Property="Foreground" Value="#F4F6F8"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="14,7"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -66,22 +71,26 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Chrome" Property="Background" Value="#24332C"/>
-                                <Setter Property="Foreground" Value="#6E8A80"/>
+                                <Setter TargetName="Chrome" Property="Background" Value="#2B313A"/>
+                                <Setter Property="Foreground" Value="#6E7680"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="RunButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#27AE60"/>
+            <Setter Property="Foreground" Value="#14171C"/>
+        </Style>
         <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
-            <Setter Property="Background" Value="#FF6A6A"/>
-            <Setter Property="Foreground" Value="#1A0C0C"/>
+            <Setter Property="Background" Value="#C0392B"/>
+            <Setter Property="Foreground" Value="#F4F6F8"/>
         </Style>
         <DataTemplate DataType="{x:Type local:MachineRow}">
             <StackPanel>
@@ -101,8 +110,8 @@
                     <TextBlock Text="{Binding MachineName}" FontWeight="SemiBold" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding TypeLabel}" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"/>
                     <WrapPanel Margin="0,8,0,0">
-                        <TextBlock Text="{Binding LossText}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,4"/>
-                        <Border Background="{Binding BadgeSoftBrush}" CornerRadius="8" Padding="8,3" Margin="0,0,0,4" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding LossText}" FontFamily="Consolas" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,4"/>
+                        <Border Background="{Binding BadgeSoftBrush}" CornerRadius="4" Padding="8,3" Margin="0,0,0,4" VerticalAlignment="Center">
                             <TextBlock Text="{Binding SeverityLabel}" Foreground="{Binding BadgeBrush}" FontSize="11" FontWeight="SemiBold"/>
                         </Border>
                     </WrapPanel>
@@ -112,7 +121,13 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid Margin="22">
+    <ScrollViewer x:Name="RootScroll"
+                  VerticalScrollBarVisibility="Disabled"
+                  HorizontalScrollBarVisibility="Disabled"
+                  CanContentScroll="False"
+                  Focusable="False"
+                  Background="Transparent">
+    <Grid x:Name="RootGrid" Margin="22">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -120,75 +135,96 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,14">
+        <Grid x:Name="HeaderGrid" Grid.Row="0" Margin="0,0,0,14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="EcoPulse OSB" FontSize="26" FontWeight="SemiBold"/>
+            <StackPanel x:Name="TitleBlock">
+                <TextBlock Text="EcoPulse OSB" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap"/>
                 <TextBlock Text="Akıllı enerji kaçağı ve ısı kaybı erken uyarı" Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
-                <Button x:Name="NormalButton" Content="Normal" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Click="NormalButton_Click"/>
+            <StackPanel x:Name="HeaderActions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                <Button x:Name="NormalButton" Content="Normal" Style="{StaticResource RunButton}" Margin="0,0,8,0" Click="NormalButton_Click"/>
                 <Button x:Name="FaultButton" Content="Arıza bas" Style="{StaticResource DangerButton}" Margin="0,0,16,0" Click="FaultButton_Click"/>
-                <Ellipse x:Name="LiveDot" Width="8" Height="8" Fill="#3DDC97" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                <TextBlock x:Name="ClockText" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                <Rectangle x:Name="LiveDot" Width="8" Height="8" Fill="#27AE60" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock x:Name="ClockText" Style="{StaticResource DataReadout}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
             </StackPanel>
         </Grid>
 
-        <UniformGrid Grid.Row="1" Rows="1" Columns="4" Margin="0,0,0,14">
-            <Border Style="{StaticResource CardBorder}" Margin="0,0,10,0" Padding="14,12">
+        <Grid x:Name="KpiGrid" Grid.Row="1" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border x:Name="KpiMachines" Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,10,0" Padding="14,12">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="AKTİF MAKİNE" Foreground="{StaticResource MutedBrush}" FontSize="11"/>
+                    <TextBlock Text="KAYITLI MAKİNE" Style="{StaticResource DataReadout}" Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
                     <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" Height="36" Margin="0,6,0,0">
-                        <TextBlock x:Name="MachineCountText" Text="—" FontSize="30" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="MachineCountText" Style="{StaticResource DataReadout}" Text="—" FontSize="30" FontWeight="SemiBold"/>
                     </Viewbox>
                 </StackPanel>
             </Border>
-            <Border Style="{StaticResource CardBorder}" Margin="0,0,10,0" Padding="14,12">
+            <Border x:Name="KpiPower" Grid.Column="1" Style="{StaticResource CardBorder}" Margin="0,0,10,0" Padding="14,12">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="ANLIK TOPLAM GÜÇ" Foreground="{StaticResource MutedBrush}" FontSize="11"/>
+                    <TextBlock Text="ANLIK TOPLAM GÜÇ" Style="{StaticResource DataReadout}" Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
                     <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" Height="36" Margin="0,6,0,0">
-                        <TextBlock x:Name="PowerText" Text="—" FontSize="30" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="PowerText" Style="{StaticResource DataReadout}" Text="—" FontSize="30" FontWeight="SemiBold"/>
                     </Viewbox>
                 </StackPanel>
             </Border>
-            <Border Style="{StaticResource CardBorder}" Margin="0,0,10,0" Padding="14,12">
+            <Border x:Name="KpiCo2" Grid.Column="2" Style="{StaticResource CardBorder}" Margin="0,0,10,0" Padding="14,12">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="ENGELLENEN CO₂" Foreground="{StaticResource MutedBrush}" FontSize="11"/>
+                    <TextBlock Text="DOĞRULANAN CO₂" Style="{StaticResource DataReadout}" Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
                     <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" Height="36" Margin="0,6,0,0">
-                        <TextBlock x:Name="Co2Text" Text="—" FontSize="30" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="Co2Text" Style="{StaticResource DataReadout}" Text="—" FontSize="30" FontWeight="SemiBold"/>
                     </Viewbox>
-                    <TextBlock Text="Kapanan alarmlar" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,2,0,0"/>
+                    <TextBlock Text="Model tahmini · kg/saat" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
-            <Border Style="{StaticResource CardBorder}" Padding="14,12">
+            <Border x:Name="KpiSavings" Grid.Column="3" Style="{StaticResource CardBorder}" Margin="0,0,10,0" Padding="14,12"
+                    ToolTip="Alarmdaki tahmini kayıp oranı, müdahale sonrasında 3 ardışık normal ölçümle doğrulanır.">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="AKTİF KAYIP" Foreground="{StaticResource MutedBrush}" FontSize="11"/>
+                    <TextBlock Text="KESİLEN KAYIP" Style="{StaticResource DataReadout}" Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+                    <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" Height="36" Margin="0,6,0,0">
+                        <TextBlock x:Name="VerifiedSavingsText" Style="{StaticResource DataReadout}" Text="—" FontSize="28" FontWeight="SemiBold"/>
+                    </Viewbox>
+                    <TextBlock Text="Model tahmini · TL/saat" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+            <Border x:Name="KpiLoss" Grid.Column="4" Style="{StaticResource CardBorder}" Padding="14,12">
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="AKTİF KAYIP" Style="{StaticResource DataReadout}" Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
                     <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" Height="34" Margin="0,6,0,0">
-                        <TextBlock x:Name="LossText" Text="—" FontSize="28" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="LossText" Style="{StaticResource DataReadout}" Text="—" FontSize="28" FontWeight="SemiBold"/>
                     </Viewbox>
-                    <TextBlock x:Name="DailyLossText" Text="—" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,2,0,0"/>
+                    <TextBlock x:Name="DailyLossText" Style="{StaticResource DataReadout}" Text="—" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
-        </UniformGrid>
+        </Grid>
 
-        <Grid Grid.Row="2">
+        <Grid x:Name="BodyGrid" Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.15*" MinWidth="200"/>
                 <ColumnDefinition Width="2.5*" MinWidth="280"/>
                 <ColumnDefinition Width="1.45*" MinWidth="240"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,12,0">
+            <Border x:Name="MachinePanel" Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,12,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="TESİS" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="2,0,0,10"/>
+                    <TextBlock DockPanel.Dock="Top" Text="TESİS" Style="{StaticResource DataReadout}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="2,0,0,10"/>
                     <ListBox x:Name="MachineList" Style="{StaticResource DarkList}" ItemContainerStyle="{StaticResource DarkListItem}" SelectionChanged="MachineList_SelectionChanged"/>
                 </DockPanel>
             </Border>
 
-            <Grid Grid.Column="1" Margin="0,0,12,0">
+            <Grid x:Name="ChartPanel" Grid.Column="1" Margin="0,0,12,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -203,10 +239,10 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <DockPanel Margin="0,0,0,6">
-                            <TextBlock Text="Voltaj" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="VoltageValueText" HorizontalAlignment="Right" Foreground="#78BEFF" FontWeight="SemiBold"/>
+                            <TextBlock Text="Voltaj" Style="{StaticResource DataReadout}" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="VoltageValueText" Style="{StaticResource DataReadout}" HorizontalAlignment="Right" Foreground="{StaticResource VoltageBrush}" FontWeight="SemiBold"/>
                         </DockPanel>
-                        <local:Sparkline x:Name="VoltageChart" Grid.Row="1" LineBrush="#78BEFF" MinHeight="80"/>
+                        <local:Sparkline x:Name="VoltageChart" Grid.Row="1" LineBrush="{StaticResource VoltageBrush}" MinHeight="80"/>
                     </Grid>
                 </Border>
                 <Border Grid.Row="2" Style="{StaticResource CardBorder}" Margin="0,0,0,8">
@@ -216,10 +252,10 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <DockPanel Margin="0,0,0,6">
-                            <TextBlock Text="Akım" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="CurrentValueText" HorizontalAlignment="Right" Foreground="{StaticResource GreenBrush}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Akım" Style="{StaticResource DataReadout}" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="CurrentValueText" Style="{StaticResource DataReadout}" HorizontalAlignment="Right" Foreground="{StaticResource CurrentBrush}" FontWeight="SemiBold"/>
                         </DockPanel>
-                        <local:Sparkline x:Name="CurrentChart" Grid.Row="1" LineBrush="#3DDC97" MinHeight="80"/>
+                        <local:Sparkline x:Name="CurrentChart" Grid.Row="1" LineBrush="{StaticResource CurrentBrush}" MinHeight="80"/>
                     </Grid>
                 </Border>
                 <Border Grid.Row="3" Style="{StaticResource CardBorder}">
@@ -229,18 +265,18 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <DockPanel Margin="0,0,0,6">
-                            <TextBlock Text="Sıcaklık" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="TemperatureValueText" HorizontalAlignment="Right" Foreground="#F5C451" FontWeight="SemiBold"/>
+                            <TextBlock Text="Sıcaklık" Style="{StaticResource DataReadout}" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="TemperatureValueText" Style="{StaticResource DataReadout}" HorizontalAlignment="Right" Foreground="{StaticResource TemperatureBrush}" FontWeight="SemiBold"/>
                         </DockPanel>
-                        <local:Sparkline x:Name="TemperatureChart" Grid.Row="1" LineBrush="#F5C451" MinHeight="80"/>
+                        <local:Sparkline x:Name="TemperatureChart" Grid.Row="1" LineBrush="{StaticResource TemperatureBrush}" MinHeight="80"/>
                     </Grid>
                 </Border>
             </Grid>
 
-            <Border Grid.Column="2" Style="{StaticResource CardBorder}">
+            <Border x:Name="AlarmPanel" Grid.Column="2" Style="{StaticResource CardBorder}">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" Margin="2,0,0,10">
-                        <TextBlock Text="ALARMLAR" FontSize="12" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="ALARMLAR" Style="{StaticResource DataReadout}" FontSize="12" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
                         <Button x:Name="MaintenanceButton" Content="Bakım Bildir" Style="{StaticResource PrimaryButton}"
                                 DockPanel.Dock="Right" HorizontalAlignment="Right"
                                 Click="MaintenanceButton_Click" IsEnabled="False"/>
@@ -254,6 +290,8 @@
         </Grid>
 
         <TextBlock x:Name="StatusText" Grid.Row="3" Margin="2,12,0,0" Foreground="{StaticResource MutedBrush}" FontSize="12"
+                   TextWrapping="Wrap"
                    Text="Simülasyon ve yerel veritabanı uygulamaya dahildir."/>
     </Grid>
+    </ScrollViewer>
 </Window>
