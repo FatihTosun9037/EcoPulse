@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>EcoPulse.Launcher</RootNamespace>
+    <AssemblyName>EcoPulse.Launcher</AssemblyName>
+    <ApplicationIcon>..\app\assets\brand\ecopulse.ico</ApplicationIcon>
+  </PropertyGroup>
+</Project>
