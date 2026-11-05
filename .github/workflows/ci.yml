@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  dotnet:
+    name: API ve başlatıcı derlemesi
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: API
+        run: dotnet build api/EcoPulse.Api.csproj --configuration Release --nologo
+
+      - name: Launcher
+        run: dotnet build launcher/EcoPulse.Launcher.csproj --configuration Release --nologo
+
+  flutter:
+    name: Flutter analiz ve testler
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos
+      - run: flutter test
