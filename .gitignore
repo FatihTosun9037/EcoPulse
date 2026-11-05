@@ -1,25 +1,22 @@
-# Local credentials and machine-specific settings
-/config.json
-/baslat-mysql.ps1
-/EcoPulse OSB — Proje Dokümantasyon Raporu.docx
-
-# Local database files
-*.db
-*.db-shm
-*.db-wal
-
-# Build output
+# Derleme çıktıları
 **/bin/
 **/obj/
-**/__pycache__/
-*.py[cod]
 /EcoPulse-Windows-x64/
 /EcoPulse-Windows-x64-*.zip
 
-# IDE and OS files
+# Loglar ve geçici dosyalar
+*.log
+/.yedek-claude/
+
+# IDE ve işletim sistemi dosyaları
 .vs/
 .vscode/
 *.user
 *.suo
 Thumbs.db
 Desktop.ini
+*.lnk
+
+# Yerel hata ayıklama görüntüleri
+/app/phone-*.png
+/app/phone-ui*.xml

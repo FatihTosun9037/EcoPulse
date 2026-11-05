@@ -1,0 +1,32 @@
+---
+description: EcoPulse OSB mimarisi, roller ve Flutter kararları
+alwaysApply: true
+---
+
+# EcoPulse OSB mimarisi
+
+Ürün iki parçadır; ikisi de bu depodadır ve birlikte çalışır:
+
+- `api/`: ASP.NET Core 9 Web API (`http://127.0.0.1:5080`). Simülasyon motoru (`PlantEngine`), telemetri, anomali kuralları, alarm, bakım/doğrulama iş emri, personel ataması ve bildirim kuyruğu burada tek merkezdedir. Durum bellektedir; API yeniden başlarsa demo sıfırlanır.
+- `app/`: Tek Flutter uygulaması. Windows masaüstü, Android ve web aynı kod tabanından çıkar. Ayrı mobil ve web projesi açma.
+- `launcher/`: API'yi arka planda açıp Flutter masaüstü penceresini başlatan küçük Windows başlatıcısı.
+- `Start-EcoPulse.ps1`: Gerekirse derler, telefonu USB ile eşler (`adb reverse tcp:5080`) ve launcher'ı açar.
+
+Eski WPF + SQLite prototipi kaldırıldı; geçmişi git'tedir.
+
+Roller:
+
+- `operator`: Sahada makineye arıza basar, normale döndürür, bakım bildirir.
+- `manager`: Tesis özetini izler, alarm ve doğrulama süreçlerini yönetir, personel ataması yapar, anomali anında bildirim alır.
+
+Flutter düzeni:
+
+- Dar ekran tek sütun ve alt gezinme. Geniş ekran (`>= 960`) yan yana özet, tesis ve alarm.
+- Rol, ayrı uygulama değil kabuk ve rota farkıdır. `GoRouter` yetkisiz rolü ilgili ekrana almaz.
+
+API ve bildirim:
+
+- Kimlik JWT ile. İstemci rolü sunucunun claim'inden okur; menüyü gizlemek yetki sayılmaz. 401 alan istemci oturumu kapatıp girişe döner.
+- Bildirimler cihaz jetonuna göre kuyruklanır (`GET /notifications?device=...`); aynı yönetici birden fazla cihazda açıkken her cihaz bildirimi ayrı alır. Sorgu cihazı yeniden kaydeder.
+- Android'de bildirim yerel bildirim kanalıyla gösterilir (FCM yoktur); istemci 2 saniyede bir sorgular.
+- Çıkışta cihaz jetonu ve kuyruğu silinir. Anomali bildirimi yalnızca yönetici cihazlarına gider.
