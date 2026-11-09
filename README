@@ -1,0 +1,21 @@
+## ⚠️ Çalıştırmadan önce oku
+
+**Bu bir prototiptir.** Gerçek sensör, sayaç veya bulut servisi yoktur; tüm telemetri (voltaj, akım, sıcaklık, su debisi) simülasyonla üretilir. Panodaki TL, CO₂ ve su rakamları gerçek bir tesisi yansıtmaz.
+
+**Sistem gereksinimleri**
+- Windows 10/11 (başlatıcı betik ve masaüstü uygulaması yalnızca Windows içindir)
+- .NET 9 SDK
+- Flutter (stable kanal)
+- Telefonda denemek için: Android SDK platform-tools (`C:\Android\platform-tools\adb.exe` yolunda), USB veri kablosu ve telefonda USB hata ayıklama açık
+
+**Bilmeniz gerekenler**
+- `Start-EcoPulse.ps1` ilk çalıştırmada API'yi, başlatıcıyı ve Flutter uygulamasını **derler**, masaüstüne kısayol kurar. İlk açılış birkaç dakika sürebilir.
+- Betik açık kalan eski EcoPulse süreçlerini kapatır. Çalışmanızı kaydedip devam edin.
+- PowerShell betik çalıştırmayı engellerse sağ tık → "PowerShell ile çalıştır" kullanın veya o oturum için çalıştırma ilkesini geçici olarak gevşetin.
+- Veriler **bellekte** tutulur. API kapanınca alarmlar ve iş emirleri sıfırlanır.
+- Demo hesapları (`operator/operator`, `manager/manager`) ve JWT anahtarı **yalnızca yerel geliştirme içindir**. Gerçek ortamda kullanmayın.
+- Telefon, API'ye USB üzerinden `adb reverse tcp:5080` tüneliyle bağlanır. Kablo takılı kalmalıdır.
+- Bir şey ters giderse günlük dosyasına bakın: `%LOCALAPPDATA%\EcoPulse\start-log.txt`
+
+**Kapsam dışı (şimdilik)**
+Gerçek Modbus/MQTT bağlantısı, kalıcı veritabanı, uzaktan push bildirim (FCM) ve gerçek kimlik sağlayıcı henüz yoktur. Ayrıntılar "Sınırlar ve yol haritası" bölümünde.
